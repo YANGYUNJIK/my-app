@@ -7,7 +7,7 @@
     "build": "expo export --platform web",
     "start": "expo start",
     "dev": "expo start --web",
-    "export:web": "EXPO_WEB_BUILD_OUTPUT=web-build expo export --platform web"
+    "export:web": "EXPO_WEB_BUILD_OUTPUT=dist expo export --platform web"
   },
   "dependencies": {
     "expo": "~53.0.6",
