@@ -4,7 +4,7 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "build": "expo export:web",
+    "build": "expo export --platform web",
     "start": "expo start",
     "dev": "expo start --web",
     "export:web": "EXPO_WEB_BUILD_OUTPUT=web-build expo export --platform web"
