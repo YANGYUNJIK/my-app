@@ -1,4 +1,5 @@
-// screens/ManageItemsScreen.js
+// ✅ ManageItemsScreen.js (재고 있음/없음 토글 포함)
+
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList, Image, Modal, StyleSheet, Platform,
@@ -12,6 +13,7 @@ export default function ManageItemsScreen() {
   const [items, setItems] = useState([]);
   const [name, setName] = useState('');
   const [type, setType] = useState('drink');
+  const [stock, setStock] = useState(true);
   const [image, setImage] = useState(null);
   const [editId, setEditId] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -55,12 +57,13 @@ export default function ManageItemsScreen() {
     const res = await fetch(`${SERVER_URL}/items`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, type, imageBase64 }),
+      body: JSON.stringify({ name, type, imageBase64, stock }),
     });
     const data = await res.json();
     if (data.success) {
       setName('');
       setImage(null);
+      setStock(true);
       fetchItems();
     }
   };
@@ -69,6 +72,7 @@ export default function ManageItemsScreen() {
     setEditId(item._id);
     setName(item.name);
     setType(item.type);
+    setStock(item.stock ?? true);
     setImage(null);
     setModalVisible(true);
   };
@@ -78,7 +82,7 @@ export default function ManageItemsScreen() {
     const res = await fetch(`${SERVER_URL}/items/${editId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, type, imageBase64 }),
+      body: JSON.stringify({ name, type, imageBase64, stock }),
     });
     const data = await res.json();
     if (data.success) {
@@ -96,7 +100,7 @@ export default function ManageItemsScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>📦 항목 관리</Text>
+      <Text style={styles.title}>📦 간식 관리</Text>
 
       <TextInput
         style={styles.input}
@@ -158,6 +162,20 @@ export default function ManageItemsScreen() {
                 >
                   <Text style={type === t ? styles.selectedText : styles.buttonText}>
                     {t === 'drink' ? '🥤 음료' : '🍪 간식'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {/* ✅ 재고 있음/없음 선택 */}
+            <View style={styles.typeRow}>
+              {[true, false].map((s) => (
+                <TouchableOpacity
+                  key={String(s)}
+                  onPress={() => setStock(s)}
+                  style={[styles.typeButton, stock === s && styles.selected]}
+                >
+                  <Text style={stock === s ? styles.selectedText : styles.buttonText}>
+                    {s ? '✅ 재고 있음' : '❌ 품절'}
                   </Text>
                 </TouchableOpacity>
               ))}

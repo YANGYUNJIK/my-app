@@ -1,24 +1,53 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, Modal, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  Image,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  Modal,
+} from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
 import logo from '../../assets/images/logo.png';
 import { useLocalSearchParams } from 'expo-router';
 
 const SERVER_URL = 'https://delivery-server-q46f.onrender.com';
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function SnackScreen() {
   const { userJob } = useLocalSearchParams();
-
   const [items, setItems] = useState([]);
+  const [likedItems, setLikedItems] = useState({});
   const [selectedItem, setSelectedItem] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [modalVisible, setModalVisible] = useState(false);
 
+  const scrollRef = useRef(null);
+  const scrollX = useRef(0);
+
   useEffect(() => {
     fetch(`${SERVER_URL}/items?type=snack`)
       .then((res) => res.json())
-      .then((data) => setItems(data))
+      .then((data) => setItems([...data, ...data]))
       .catch((err) => console.log('❌ 간식 불러오기 실패:', err));
   }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (scrollRef.current && items.length > 0) {
+        scrollX.current += 1;
+        scrollRef.current.scrollTo({ x: scrollX.current, animated: false });
+        if (scrollX.current > items.length * SCREEN_WIDTH * 0.22) {
+          scrollX.current = 0;
+          scrollRef.current.scrollTo({ x: 0, animated: false });
+        }
+      }
+    }, 30);
+
+    return () => clearInterval(interval);
+  }, [items]);
 
   const openModal = (item) => {
     setSelectedItem(item);
@@ -40,47 +69,79 @@ export default function SnackScreen() {
       });
 
       const result = await response.json();
-      console.log('✅ 주문 전송 결과:', result);
       alert(`${selectedItem.name} ${quantity}개 신청 완료!`);
       setModalVisible(false);
     } catch (e) {
-      console.log('❌ 주문 전송 실패:', e);
       alert('❌ 신청 실패');
     }
   };
 
+  const toggleLike = (itemName) => {
+    setLikedItems((prev) => ({
+      ...prev,
+      [itemName]: !prev[itemName],
+    }));
+  };
+
+  if (items.length === 0) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Image source={logo} style={styles.logoImage} />
+        <Text style={styles.emptyText}>등록된 간식이 없어요!</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {items.length > 0 ? (
-        <FlatList
-          data={items}
-          numColumns={2}
-          keyExtractor={(_, i) => i.toString()}
-          columnWrapperStyle={{ justifyContent: 'space-between' }}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.itemBox} onPress={() => openModal(item)}>
-              <Image source={{ uri: item.image }} style={styles.image} />
-              <Text>{item.name}</Text>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {items.map((item, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.itemBox}
+            onPress={() => openModal(item)}
+            activeOpacity={0.8}
+          >
+            <Image source={{ uri: item.image }} style={styles.image} />
+            <Text style={styles.itemName}>{item.name}</Text>
+            <TouchableOpacity
+              onPress={() => toggleLike(item.name)}
+              style={styles.heartIcon}
+            >
+              <FontAwesome
+                name={likedItems[item.name] ? 'heart' : 'heart-o'}
+                size={18}
+                color={likedItems[item.name] ? 'red' : 'gray'}
+              />
             </TouchableOpacity>
-          )}
-        />
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Image source={logo} style={styles.logoImage} />
-          <Text style={styles.emptyText}>등록된 간식이 없어요!</Text>
-        </View>
-      )}
+            <Text style={styles.stockTag}>
+              {item.stock === 0 ? '품절' : `재고: ${item.stock}`}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       <Modal visible={modalVisible} transparent animationType="fade">
         <View style={styles.modalView}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{selectedItem?.name} 신청</Text>
             <View style={styles.quantityRow}>
-              <TouchableOpacity onPress={() => quantity > 1 && setQuantity(quantity - 1)} style={styles.arrowButton}>
+              <TouchableOpacity
+                onPress={() => quantity > 1 && setQuantity(quantity - 1)}
+                style={styles.arrowButton}
+              >
                 <Text style={styles.arrowText}>-</Text>
               </TouchableOpacity>
               <Text style={styles.quantityText}>{quantity}</Text>
-              <TouchableOpacity onPress={() => setQuantity(quantity + 1)} style={styles.arrowButton}>
+              <TouchableOpacity
+                onPress={() => setQuantity(quantity + 1)}
+                style={styles.arrowButton}
+              >
                 <Text style={styles.arrowText}>+</Text>
               </TouchableOpacity>
             </View>
@@ -88,7 +149,10 @@ export default function SnackScreen() {
               <TouchableOpacity onPress={sendOrder} style={styles.actionButton}>
                 <Text style={styles.buttonText}>신청</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.actionButton}>
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+                style={styles.actionButton}
+              >
                 <Text style={styles.buttonText}>취소</Text>
               </TouchableOpacity>
             </View>
@@ -100,16 +164,48 @@ export default function SnackScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
+  container: { flex: 1, paddingVertical: 20, backgroundColor: '#fff' },
+  scrollContent: { flexDirection: 'row', alignItems: 'center' },
   itemBox: {
-    width: '48%',
-    marginBottom: 10,
-    padding: 10,
-    backgroundColor: '#eee',
-    borderRadius: 8,
+    width: SCREEN_WIDTH * 0.22,
+    height: 220,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 8,
+    marginHorizontal: 8,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#eee',
+    position: 'relative',
   },
-  image: { width: 80, height: 80, marginBottom: 5, resizeMode: 'contain' },
+  image: {
+    width: '100%',
+    height: 130,
+    resizeMode: 'contain',
+    marginBottom: 8,
+    borderRadius: 6,
+  },
+  itemName: {
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  heartIcon: {
+    position: 'absolute',
+    right: 8,
+    bottom: 8,
+  },
+  stockTag: {
+    position: 'absolute',
+    left: 8,
+    bottom: 8,
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+    fontSize: 12,
+  },
   modalView: {
     flex: 1, justifyContent: 'center', alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.5)',
