@@ -1,9 +1,3 @@
-import { View, Text } from 'react-native';
-
-export default function Home() {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Hello from Expo Router!</Text>
-    </View>
-  );
-}
+// app/index.js
+import IntroScreen from './screens/IntroScreen';
+export default IntroScreen;
