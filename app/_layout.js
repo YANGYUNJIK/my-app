@@ -6,7 +6,7 @@ export default function Layout() {
   const targetDate = new Date('2025-09-19');
   const today = new Date();
   const diff = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  const ddayText = `D-${diff}`;
+  const ddayText = `2025학년도 전국기능경기대회     D-${diff}`;
 
   return (
     <View style={{ flex: 1 }}>

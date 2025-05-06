@@ -41,7 +41,7 @@ app.get('/items', async (req, res) => {
 // ✅ 항목 등록
 app.post('/items', upload.single('image'), async (req, res) => {
   const db = getDb();
-  const { name, type, imageBase64 } = req.body;
+  const { name, type, imageBase64, stock } = req.body;
 
   if (!name || !type) return res.status(400).json({ error: '이름과 종류는 필수입니다.' });
 
@@ -58,7 +58,13 @@ app.post('/items', upload.single('image'), async (req, res) => {
       imageUrl = `${req.protocol}://${req.get('host')}/uploads/logo.png`;
     }
 
-    const newItem = { name, type, image: imageUrl };
+    const newItem = {
+      name,
+      type,
+      image: imageUrl,
+      stock: stock === 'false' || stock === false ? false : true // 기본값 true
+    };
+
     const result = await db.collection('items').insertOne(newItem);
     res.json({ success: true, item: { ...newItem, _id: result.insertedId } });
   } catch (err) {
@@ -69,17 +75,23 @@ app.post('/items', upload.single('image'), async (req, res) => {
 
 // ✅ 항목 수정
 app.patch('/items/:id', async (req, res) => {
+  console.log('🛠 PATCH 요청 수신:', req.body);
+
   const db = getDb();
   const itemId = req.params.id;
-  const { name, type, imageBase64 } = req.body;
+  const { name, type, imageBase64, stock } = req.body;
 
   try {
     const item = await db.collection('items').findOne({ _id: new ObjectId(itemId) });
     if (!item) return res.status(404).json({ error: '항목 없음' });
 
     const updateData = {};
-    if (name) updateData.name = name;
-    if (type) updateData.type = type;
+
+    if (typeof name !== 'undefined') updateData.name = name;
+    if (typeof type !== 'undefined') updateData.type = type;
+    if (typeof stock !== 'undefined') {
+      updateData.stock = stock === 'false' || stock === false ? false : true;
+    }
 
     if (imageBase64) {
       const oldFile = path.basename(item.image);
@@ -94,6 +106,8 @@ app.patch('/items/:id', async (req, res) => {
       updateData.image = `${req.protocol}://${req.get('host')}/uploads/${filename}`;
     }
 
+    console.log('✅ 실제 저장될 데이터:', updateData);
+
     await db.collection('items').updateOne(
       { _id: new ObjectId(itemId) },
       { $set: updateData }
@@ -102,6 +116,7 @@ app.patch('/items/:id', async (req, res) => {
     const updated = await db.collection('items').findOne({ _id: new ObjectId(itemId) });
     res.json({ success: true, item: updated });
   } catch (err) {
+    console.error('❌ 항목 수정 중 오류:', err);
     res.status(500).json({ error: '수정 실패' });
   }
 });
@@ -137,7 +152,10 @@ app.post('/order', async (req, res) => {
   }
 
   const newOrder = {
-    name, menu, quantity, type,
+    name,
+    menu,
+    quantity,
+    type,
     status: 'pending',
     createdAt: new Date(),
   };

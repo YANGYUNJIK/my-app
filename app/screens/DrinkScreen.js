@@ -1,3 +1,4 @@
+// app/screens/DrinkScreen.js
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -30,29 +31,31 @@ export default function DrinkScreen() {
   useEffect(() => {
     fetch(`${SERVER_URL}/items?type=drink`)
       .then((res) => res.json())
-      .then((data) => setItems([...data, ...data])) // 자동 스크롤을 위해 중복
+      .then((data) => setItems([...data, ...data])) // ⏩ 스크롤 자연스럽게
       .catch((err) => console.log('❌ 음료 불러오기 실패:', err));
   }, []);
 
-  // ⏩ 자동 스크롤
   useEffect(() => {
     const interval = setInterval(() => {
       if (scrollRef.current && items.length > 0) {
         scrollX.current += 1;
         scrollRef.current.scrollTo({ x: scrollX.current, animated: false });
 
-        // 맨 끝까지 스크롤되면 처음으로 되돌리기
         if (scrollX.current > items.length * SCREEN_WIDTH * 0.22) {
           scrollX.current = 0;
           scrollRef.current.scrollTo({ x: 0, animated: false });
         }
       }
-    }, 30); // 속도 조절
+    }, 30);
 
     return () => clearInterval(interval);
   }, [items]);
 
   const openModal = (item) => {
+    if (item.stock === false) {
+      alert('❌ 품절된 상품입니다');
+      return;
+    }
     setSelectedItem(item);
     setQuantity(1);
     setModalVisible(true);
@@ -127,7 +130,7 @@ export default function DrinkScreen() {
 
             {/* 재고 표시 */}
             <Text style={styles.stockTag}>
-              {item.stock === 0 ? '품절' : `재고: ${item.stock}`}
+              {item.stock === false ? '품절' : '재고 있음'}
             </Text>
           </TouchableOpacity>
         ))}
@@ -175,7 +178,6 @@ export default function DrinkScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, paddingVertical: 20, backgroundColor: '#fff' },
   scrollContent: { flexDirection: 'row', alignItems: 'center' },
-
   itemBox: {
     width: SCREEN_WIDTH * 0.22,
     height: 220,
