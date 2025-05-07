@@ -1,31 +1,53 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, FlatList, Image, TouchableOpacity,
-  Modal, StyleSheet, Pressable,
+  View,
+  Text,
+  Image,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  Modal,
 } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
-import { AntDesign } from '@expo/vector-icons';
+import { FontAwesome } from '@expo/vector-icons';
 import logo from '../../assets/images/logo.png';
-
+import { useLocalSearchParams } from 'expo-router';
 
 const SERVER_URL = 'https://delivery-server-q46f.onrender.com';
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function SnackScreen() {
   const { userJob } = useLocalSearchParams();
-
   const [items, setItems] = useState([]);
+  const [likedItems, setLikedItems] = useState({});
   const [selectedItem, setSelectedItem] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [modalVisible, setModalVisible] = useState(false);
 
+  const scrollRef = useRef(null);
+  const scrollX = useRef(0);
+
   useEffect(() => {
     fetch(`${SERVER_URL}/items?type=snack`)
       .then((res) => res.json())
-      .then((data) =>
-        setItems(data.map((item) => ({ ...item, liked: false })))
-      )
+      .then((data) => setItems([...data, ...data]))
       .catch((err) => console.log('❌ 간식 불러오기 실패:', err));
   }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (scrollRef.current && items.length > 0) {
+        scrollX.current += 1;
+        scrollRef.current.scrollTo({ x: scrollX.current, animated: false });
+        if (scrollX.current > items.length * SCREEN_WIDTH * 0.22) {
+          scrollX.current = 0;
+          scrollRef.current.scrollTo({ x: 0, animated: false });
+        }
+      }
+    }, 30);
+
+    return () => clearInterval(interval);
+  }, [items]);
 
   const openModal = (item) => {
     setSelectedItem(item);
@@ -54,56 +76,55 @@ export default function SnackScreen() {
     }
   };
 
-  const handleLike = (targetItem) => {
-    setItems((prevItems) =>
-      prevItems.map((item) =>
-        item.name === targetItem.name
-          ? { ...item, liked: !item.liked }
-          : item
-      )
-    );
+  const toggleLike = (itemName) => {
+    setLikedItems((prev) => ({
+      ...prev,
+      [itemName]: !prev[itemName],
+    }));
   };
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.itemBox} onPress={() => openModal(item)}>
-      <Image source={{ uri: item.image }} style={styles.image} />
-      <Text style={styles.itemName}>{item.name}</Text>
-
-      <Text style={styles.stockStatus}>
-        {item.stock === false ? '품절' : '재고 있음'}
-      </Text>
-
-      <Pressable
-        onPress={() => handleLike(item)}
-        style={styles.likeButton}
-      >
-        <AntDesign
-          name={item.liked ? 'heart' : 'hearto'}
-          size={18}
-          color={item.liked ? 'red' : '#999'}
-        />
-      </Pressable>
-    </TouchableOpacity>
-  );
+  if (items.length === 0) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Image source={logo} style={styles.logoImage} />
+        <Text style={styles.emptyText}>등록된 간식이 없어요!</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-
-      {items.length > 0 ? (
-        <FlatList
-          data={items}
-          numColumns={4}
-          keyExtractor={(_, i) => i.toString()}
-          columnWrapperStyle={{ justifyContent: 'space-around' }}
-          renderItem={renderItem}
-          contentContainerStyle={styles.flatListContent}
-        />
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Image source={logo} style={styles.logoImage} />
-          <Text style={styles.emptyText}>등록된 간식이 없어요!</Text>
-        </View>
-      )}
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {items.map((item, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.itemBox}
+            onPress={() => openModal(item)}
+            activeOpacity={0.8}
+          >
+            <Image source={{ uri: item.image }} style={styles.image} />
+            <Text style={styles.itemName}>{item.name}</Text>
+            <TouchableOpacity
+              onPress={() => toggleLike(item.name)}
+              style={styles.heartIcon}
+            >
+              <FontAwesome
+                name={likedItems[item.name] ? 'heart' : 'heart-o'}
+                size={18}
+                color={likedItems[item.name] ? 'red' : 'gray'}
+              />
+            </TouchableOpacity>
+            <Text style={styles.stockTag}>
+              {item.stock === 0 ? '품절' : `재고: ${item.stock}`}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       <Modal visible={modalVisible} transparent animationType="fade">
         <View style={styles.modalView}>
@@ -128,7 +149,10 @@ export default function SnackScreen() {
               <TouchableOpacity onPress={sendOrder} style={styles.actionButton}>
                 <Text style={styles.buttonText}>신청</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.actionButton}>
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+                style={styles.actionButton}
+              >
                 <Text style={styles.buttonText}>취소</Text>
               </TouchableOpacity>
             </View>
@@ -140,20 +164,19 @@ export default function SnackScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  flatListContent: { paddingBottom: 20 },
+  container: { flex: 1, paddingVertical: 20, backgroundColor: '#fff' },
+  scrollContent: { flexDirection: 'row', alignItems: 'center' },
   itemBox: {
-    width: '18%',
-    height: 240,
+    width: SCREEN_WIDTH * 0.22,
+    height: 220,
     backgroundColor: '#fff',
     borderRadius: 10,
     padding: 8,
-    marginBottom: 35,
+    marginHorizontal: 8,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#eee',
     position: 'relative',
-    justifyContent: 'center',
   },
   image: {
     width: '100%',
@@ -163,22 +186,25 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   itemName: {
-    fontWeight: 'bold',
     fontSize: 14,
+    fontWeight: '500',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  stockStatus: {
+  heartIcon: {
     position: 'absolute',
+    right: 8,
     bottom: 8,
-    left: 10,
+  },
+  stockTag: {
+    position: 'absolute',
+    left: 8,
+    bottom: 8,
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
     fontSize: 12,
-    color: '#888',
-  },
-  likeButton: {
-    position: 'absolute',
-    bottom: 8,
-    right: 10,
   },
   modalView: {
     flex: 1, justifyContent: 'center', alignItems: 'center',
