@@ -94,7 +94,7 @@ export default function SnackScreen() {
           data={items}
           numColumns={4}
           keyExtractor={(_, i) => i.toString()}
-          columnWrapperStyle={{ justifyContent: 'space-between' }}
+          columnWrapperStyle={{ justifyContent: 'space-around' }}
           renderItem={renderItem}
           contentContainerStyle={styles.flatListContent}
         />
@@ -143,12 +143,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#fff' },
   flatListContent: { paddingBottom: 20 },
   itemBox: {
-    width: '22%',
+    width: '18%',
     height: 240,
     backgroundColor: '#fff',
     borderRadius: 10,
     padding: 8,
-    marginBottom: 16,
+    marginBottom: 35,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#eee',
