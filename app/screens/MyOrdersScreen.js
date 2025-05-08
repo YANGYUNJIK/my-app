@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-const SERVER_URL = 'https://delivery-server-q46f.onrender.com';
+const SERVER_URL = 'https://my-app-pzfp.onrender.com';
 
 export default function MyOrdersScreen() {
   const { userJob } = useLocalSearchParams();

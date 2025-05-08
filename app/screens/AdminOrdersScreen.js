@@ -4,7 +4,7 @@ import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
 } from 'react-native';
 
-const SERVER_URL = 'https://delivery-server-q46f.onrender.com';
+const SERVER_URL = 'https://my-app-pzfp.onrender.com';
 
 export default function AdminOrdersScreen() {
   const [orders, setOrders] = useState([]);

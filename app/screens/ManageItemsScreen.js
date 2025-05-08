@@ -6,7 +6,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 
-const SERVER_URL = 'https://delivery-server-q46f.onrender.com';
+const SERVER_URL = 'https://my-app-pzfp.onrender.com';
 
 export default function ManageItemsScreen() {
   const [items, setItems] = useState([]);
